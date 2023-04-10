@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap" rel="stylesheet"> 
+    
+    <title>Web Worker</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <script src="https://unpkg.com/rxjs@^7/dist/bundles/rxjs.umd.min.js"></script>
+
+    <style>
+        html {
+            max-height: 100vh;
+            min-height: 100vh;
+            max-width: 100vw;
+            min-width: 100vw;
+            background-color: #FFD154;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }    
+
+        * {
+            font-family: 'Space Grotesk';
+        }
+
+        .main-content {
+            height: 40vh;
+            width: 25vw;
+            
+            border: 6px dashed black;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-radius: 28px;
+        }
+
+        h1 {
+            font-size: 50px;
+        }
+
+        .flex {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .buttons-container {
+            padding: 40px;
+            justify-content: space-between;
+            margin: 0 60px;
+        }
+
+        .round-box {
+            background: white;
+            padding: 10px 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 4px solid black;
+            margin-left: 20px;
+        }
+
+        .value {
+            margin-bottom: 36px;
+        }
+
+        .choices button {
+            cursor: pointer;
+            color: black;
+            font-size: 30px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;      
+        }
+
+        .choices button:active {
+            box-shadow: inset 0 -3px black;
+        }
+
+
+        .choices button:disabled {
+            cursor: not-allowed;    
+            opacity: 0.7;      
+        }
+
+        #incoming-value {
+            font-size: 18px;
+        }
+
+        .bg-green {
+            background-color: #3FC37D;;
+        }
+
+        .bg-red {
+            background-color: #FC724C;
+        }
+
+        .bg-blue {
+            background-color: #87C5E1;
+        }
+
+        .code {
+            background: lightgray;
+            padding: 4px;
+            font-family: monospace;
+        }
+
+        span.round-box {
+            margin-left: 0px;
+            display: inline-block;
+            height: unset;
+            width: unset;
+            font-size: 14px;
+            padding: 4px 12px;
+        }
+
+        button#select-button {
+            width: 80px;
+            height: 80px;
+
+            border: 4px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .width-200 {
+            width: 200px;
+        }
+
+    </style>
+    
+</head>
+
+<body>
+
+    <div class="main-content">
+        <h1 id="clientId">Name: </h1>
+        
+        <div class="flex buttons-container ">
+            <button id="select-button" class="bg-red" title="Help wanted">o</button>
+            
+            <div class="choices">
+                <button id="choice-a"  class="round-box bg-green">A</button>
+
+                <div class="flex width-200">
+                    <button id="choice-b"  class="round-box bg-blue">B</button>
+                    <button id="choice-c"  class="round-box bg-blue">C</button>
+                </div>
+                
+                <button id="choice-d"  class="round-box bg-green">D</button>
+            </div>    
+        </div>
+<!-- 
+        <div class="flex actions">
+            <button id="upload-file-button" class="round-box bg-blue">Upload Script</button>
+
+            <button id="start-button" disabled class="round-box bg-green">Start Script</button>
+            <button id="stop-button" disabled class="round-box bg-red">Stop Script</button>
+        </div> -->
+
+        <!-- <button id="help-button" title="Help wanted">?</button> -->
+    </div>
+    
+    <!-- <a href="https://github.com/Dinika/web-worker-demo.git" class="source-code">Source Code</a>
+    
+    <dialog id="help-dialog">
+        <button id="close-help">X</button>
+        <div class="content">
+            <h1>Help is Here</h1>
+            <div class="description">
+
+                
+                <p>This demo allows you to run ANY javascript file in a web worker!</p>
+
+                <h3>Wanna try?</h3>
+
+                <p>Hit the <span class="round-box bg-blue">Upload Script</span> button to upload a javascript file that contains the script which you would like to run in the worker.</p>
+                
+                <p>Hit the <span class="round-box bg-green">Start Script</span> button to start the execution of your script inside a worker. This is also calls the <span  class="code">start()</span> function in your script (if there is one).</p>
+                
+                <p>If your script posts any messages via the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage">postMessage()</a>
+                    API to the main script on this page, then it will be displayed as <span class="round-box">Incoming value</span>.
+                </p>
+
+                <p>You can hit the <span class="round-box bg-red">Stop Script</span> button to stop the execution of your script. This will call the <span class="code">stop()</span> function in your script (if there is one) and terminate the worker.</p>
+
+                <h3>Want to check out some example scripts?</h3>
+                <ul>
+                    <li><a href="https://github.com/Dinika/web-worker-demo/blob/main/example-scripts/time-of-the-day.js">This simple script</a> posts the current time every second.</li>
+                    <li><a href="https://github.com/Dinika/web-worker-demo/blob/main/example-scripts/queens-songs.js">This script</a> posts a Queen's song every 2 seconds.</li>
+                </ul>
+            </div>
+        </div>
+    </dialog> -->
+    
+    <script type="module">
+        import './main.js'
+    </script>
+
+</body>
+</html>
